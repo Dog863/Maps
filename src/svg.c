@@ -2,17 +2,55 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <errno.h>
 
 typedef struct svg {
     FILE *file;
 } SVG;
 
+// Função auxiliar para criar diretório recursivamente
+static void criar_diretorio(const char *path) {
+    char tmp[512];
+    char *p = NULL;
+    
+    if (!path || path[0] == '\0') return;
+    
+    snprintf(tmp, sizeof(tmp), "%s", path);
+    
+    // Remove barra no final se existir
+    size_t len = strlen(tmp);
+    if (len > 0 && tmp[len-1] == '/') {
+        tmp[len-1] = '\0';
+    }
+    
+    // Cria diretórios recursivamente
+    for (p = tmp + 1; *p; p++) {
+        if (*p == '/') {
+            *p = '\0';
+            mkdir(tmp, 0755);
+            *p = '/';
+        }
+    }
+    mkdir(tmp, 0755);
+}
+
 SVG* svg_criar(const char *nome_arquivo, double largura, double altura) {
     SVG *svg = (SVG*)malloc(sizeof(SVG));
     if (!svg) return NULL;
     
+    // Extrair o diretório do caminho e criá-lo
+    char dir_path[512];
+    strcpy(dir_path, nome_arquivo);
+    char *last_slash = strrchr(dir_path, '/');
+    if (last_slash) {
+        *last_slash = '\0';
+        criar_diretorio(dir_path);
+    }
+    
     svg->file = fopen(nome_arquivo, "w");
     if (!svg->file) {
+        fprintf(stderr, "Erro: não foi possível criar arquivo SVG: %s\n", nome_arquivo);
         free(svg);
         return NULL;
     }
@@ -20,7 +58,10 @@ SVG* svg_criar(const char *nome_arquivo, double largura, double altura) {
     fprintf(svg->file, "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" width=\"%.0f\" height=\"%.0f\">\n", 
             largura, altura);
     fprintf(svg->file, "<style>\n");
-    fprintf(svg->file, "  text { font-family: sans-serif; }\n");
+    fprintf(svg->file, "  text { font-family: sans-serif; font-size: 10px; }\n");
+    fprintf(svg->file, "  .caminho { fill: none; stroke-linecap: round; stroke-linejoin: round; }\n");
+    fprintf(svg->file, "  .percurso { animation: dash 1s linear infinite; }\n");
+    fprintf(svg->file, "  @keyframes dash { to { stroke-dashoffset: -100; } }\n");
     fprintf(svg->file, "</style>\n");
     
     return svg;
@@ -52,7 +93,7 @@ void svg_circulo(SVG *svg, double cx, double cy, double r,
 void svg_linha(SVG *svg, double x1, double y1, double x2, double y2,
                const char *stroke, double stroke_width, const char *stroke_dasharray) {
     if (!svg) return;
-    if (stroke_dasharray) {
+    if (stroke_dasharray && stroke_dasharray[0] != '\0') {
         fprintf(svg->file, "  <line x1=\"%.2f\" y1=\"%.2f\" x2=\"%.2f\" y2=\"%.2f\" "
                 "stroke=\"%s\" stroke-width=\"%.1f\" stroke-dasharray=\"%s\" />\n",
                 x1, y1, x2, y2, stroke, stroke_width, stroke_dasharray);
@@ -71,7 +112,7 @@ void svg_texto(SVG *svg, double x, double y, const char *texto, const char *fill
 
 void svg_path_begin(SVG *svg, const char *stroke, double stroke_width, const char *fill) {
     if (!svg) return;
-    fprintf(svg->file, "  <path fill=\"%s\" stroke=\"%s\" stroke-width=\"%.1f\" d=\"",
+    fprintf(svg->file, "  <path class=\"caminho\" fill=\"%s\" stroke=\"%s\" stroke-width=\"%.1f\" d=\"",
             fill ? fill : "none", stroke ? stroke : "none", stroke_width);
 }
 
@@ -91,18 +132,43 @@ void svg_animate_motion(SVG *svg, const char *tipo, double r, double w, double h
     if (!svg) return;
     
     if (strcmp(tipo, "circle") == 0) {
-        fprintf(svg->file, "  <circle r=\"%.1f\" fill=\"%s\" stroke=\"%s\">\n",
+        fprintf(svg->file, "  <circle r=\"%.1f\" fill=\"%s\" stroke=\"%s\" stroke-width=\"1\">\n",
                 r, fill, stroke);
         fprintf(svg->file, "    <animateMotion dur=\"%.1fs\" repeatCount=\"indefinite\" path=\"%s\"/>\n",
                 duracao, path);
         fprintf(svg->file, "  </circle>\n");
     } else if (strcmp(tipo, "rect") == 0) {
-        fprintf(svg->file, "  <rect width=\"%.1f\" height=\"%.1f\" fill=\"%s\" stroke=\"%s\">\n",
+        fprintf(svg->file, "  <rect width=\"%.1f\" height=\"%.1f\" fill=\"%s\" stroke=\"%s\" stroke-width=\"1\">\n",
                 w, h, fill, stroke);
         fprintf(svg->file, "    <animateMotion dur=\"%.1fs\" repeatCount=\"indefinite\" path=\"%s\"/>\n",
                 duracao, path);
         fprintf(svg->file, "  </rect>\n");
     }
+}
+
+void svg_desenhar_caminho(SVG *svg, Caminho *c, const char *stroke, double stroke_width) {
+    if (!svg || !c || caminho_num_vertices(c) < 2) return;
+    
+    // Inicia o path
+    svg_path_begin(svg, stroke, stroke_width, "none");
+    
+    // Adiciona todos os vértices do caminho
+    for (int i = 0; i < caminho_num_vertices(c); i++) {
+        Vertice *v = caminho_get_vertice(c, i);
+        if (v) {
+            double x = vertice_get_x(v);
+            double y = vertice_get_y(v);
+            
+            if (i == 0) {
+                fprintf(svg->file, "M%.2f,%.2f ", x, y);
+            } else {
+                fprintf(svg->file, "L%.2f,%.2f ", x, y);
+            }
+        }
+    }
+    
+    // Finaliza o path
+    fprintf(svg->file, "\" />\n");
 }
 
 void svg_bounding_box(SVG *svg, double x, double y, double w, double h, const char *cor, double opacidade) {
