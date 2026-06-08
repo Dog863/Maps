@@ -16,6 +16,10 @@ typedef struct svg SVG;
 
 /**
  * Cria um novo arquivo SVG
+ * @param nome_arquivo Caminho do arquivo .svg
+ * @param largura Largura da página em pixels
+ * @param altura Altura da página em pixels
+ * @return Ponteiro para SVG ou NULL em erro
  */
 SVG* svg_criar(const char *nome_arquivo, double largura, double altura);
 
@@ -48,7 +52,7 @@ void svg_linha(SVG *svg, double x1, double y1, double x2, double y2,
 void svg_texto(SVG *svg, double x, double y, const char *texto, const char *fill, double font_size);
 
 /**
- * Inicia um path
+ * Inicia um path (para desenhar linhas contínuas)
  */
 void svg_path_begin(SVG *svg, const char *stroke, double stroke_width, const char *fill);
 
@@ -70,17 +74,7 @@ void svg_animate_motion(SVG *svg, const char *tipo, double r, double w, double h
                         double duracao);
 
 /**
- * Desenha todas as quadras
- */
-void svg_desenhar_quadras(SVG *svg, ListaQuadras *quadras);
-
-/**
- * Desenha o grafo (todas as arestas)
- */
-void svg_desenhar_grafo(SVG *svg, Grafo *g, const char *stroke, double stroke_width);
-
-/**
- * Desenha um caminho (percurso)
+ * Desenha um caminho (percurso) do Dijkstra
  */
 void svg_desenhar_caminho(SVG *svg, Caminho *c, const char *stroke, double stroke_width);
 
