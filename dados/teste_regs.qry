@@ -1,0 +1,8 @@
+cat > dados/teste_regs.qry << 'EOF'
+# Teste apenas de componentes conexos
+
+regs 20
+regs 15
+regs 10
+
+EOF

@@ -1,0 +1,7 @@
+cat > dados/teste_exp.qry << 'EOF'
+# Teste apenas de expansão viária
+
+exp 12
+exp 10
+
+EOF

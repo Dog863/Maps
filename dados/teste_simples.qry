@@ -1,0 +1,12 @@
+cat > dados/teste_simples.qry << 'EOF'
+# Teste simples: apenas registradores e um trajeto
+
+@o? 0 b01.1 N 15
+@o? 1 b01.2 S 20
+p? 0 1 blue red
+
+@o? 2 b03.5 L 30
+@o? 3 b05.10 O 45
+p? 2 3 green orange
+
+EOF

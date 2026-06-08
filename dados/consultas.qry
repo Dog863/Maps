@@ -1,0 +1,72 @@
+cat > dados/consultas.qry << 'EOF'
+# ============================================
+# TESTE 1: Armazenar endereços nos registradores
+# ============================================
+
+# Armazenar endereço no registrador R0 (b01.1, face N, número 15)
+@o? 0 b01.1 N 15
+
+# Armazenar endereço no registrador R1 (b01.2, face S, número 20)
+@o? 1 b01.2 S 20
+
+# Armazenar endereço no registrador R2 (b03.5, face L, número 30)
+@o? 2 b03.5 L 30
+
+# Armazenar endereço no registrador R3 (b05.10, face O, número 45)
+@o? 3 b05.10 O 45
+
+# ============================================
+# TESTE 2: Atualizar velocidade em uma região
+# ============================================
+
+# Atualizar velocidade na região (x=95, y=95, w=500, h=200) para 30 m/s
+m 95 95 500 200 30
+
+# ============================================
+# TESTE 3: Calcular componentes conexos (regs)
+# ============================================
+
+# Velocidade limite 20 m/s
+regs 20
+
+# Velocidade limite 15 m/s
+regs 15
+
+# Velocidade limite 10 m/s
+regs 10
+
+# ============================================
+# TESTE 4: Expansão viária (exp)
+# ============================================
+
+# Expandir vias com velocidade < 12 m/s
+exp 12
+
+# Expandir vias com velocidade < 8 m/s
+exp 8
+
+# ============================================
+# TESTE 5: Melhor trajeto entre endereços (p?)
+# ============================================
+
+# Trajeto entre R0 e R1 (mais curto em azul, mais rápido em vermelho)
+p? 0 1 blue red
+
+# Trajeto entre R2 e R3
+p? 2 3 green orange
+
+# Trajeto entre R0 e R2
+p? 0 2 purple cyan
+
+# ============================================
+# TESTE 6: Trajeto entre quadras distantes
+# ============================================
+
+# Armazenar quadra do início (b01.1) e fim (b010.10)
+@o? 4 b01.1 N 10
+@o? 5 b010.10 S 20
+
+# Trajeto mais longo (atravessar toda a cidade)
+p? 4 5 darkblue darkred
+
+EOF
