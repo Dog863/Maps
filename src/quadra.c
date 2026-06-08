@@ -10,13 +10,13 @@ typedef struct quadra {
     char fill[20];
     char stroke[20];
     double stroke_width;
-}Quadra;
+} Quadra;
 
 typedef struct lista_quadras {
     Quadra **quadras;
     int num;
     int cap;
-}ListaQuadras;
+} ListaQuadras;
 
 Quadra* quadra_criar(const char *cep, double x, double y, double w, double h,
                      const char *fill, const char *stroke, double sw) {
@@ -57,33 +57,29 @@ double quadra_get_stroke_width(Quadra *q) { return q ? q->stroke_width : 0; }
 void quadra_calcular_endereco(Quadra *q, char face, int numero, double *x, double *y) {
     if (!q) return;
     
-    double cx = q->x + q->w / 2;
-    double cy = q->y + q->h / 2;
-    
-    // Âncora no canto sudeste (x + w, y + h)
     double ancora_x = q->x + q->w;
     double ancora_y = q->y + q->h;
     
     switch (face) {
-        case 'N':  // Norte (topo)
+        case 'N':
             *x = ancora_x - numero;
             *y = q->y;
             break;
-        case 'S':  // Sul (base)
+        case 'S':
             *x = ancora_x - numero;
             *y = q->y + q->h;
             break;
-        case 'L':  // Leste (direita)
+        case 'L':
             *x = q->x + q->w;
             *y = ancora_y - numero;
             break;
-        case 'O':  // Oeste (esquerda)
+        case 'O':
             *x = q->x;
             *y = ancora_y - numero;
             break;
         default:
-            *x = cx;
-            *y = cy;
+            *x = q->x + q->w / 2;
+            *y = q->y + q->h / 2;
     }
 }
 
@@ -91,7 +87,7 @@ ListaQuadras* lista_quadras_criar(void) {
     ListaQuadras *l = (ListaQuadras*)malloc(sizeof(ListaQuadras));
     if (!l) return NULL;
     
-    l->cap = 100;
+    l->cap = 200;  // Aumentado para 200 quadras
     l->num = 0;
     l->quadras = (Quadra**)malloc(l->cap * sizeof(Quadra*));
     
