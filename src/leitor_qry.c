@@ -279,29 +279,42 @@ static void processar_comando_p(ContextoQRY *ctx, char *linha) {
         Caminho *curto = dijkstra_distancia(ctx->grafo, v_orig, v_dest);
         Caminho *rapido = dijkstra_tempo(ctx->grafo, v_orig, v_dest);
         
-        if (curto) {
+       if (curto) {
             fprintf(ctx->txt_output, "Caminho mais curto (distância %.2f m):\n", 
                     caminho_distancia(curto));
             svg_desenhar_caminho(ctx->svg, curto, cc, 3.0);
             
-            for (int i = 0; i < caminho_num_arestas(curto) && i < 30; i++) {
-                Aresta *a = caminho_get_aresta(curto, i);
-                fprintf(ctx->txt_output, "  - Siga pela %s\n", aresta_get_nome(a));
-            }
-        } else {
+            // O caminho mais curto pode ser animado mais lentamente
+            // Baseado na distância (mais distante = mais lento)
+            double duracao_animacao = caminho_distancia(curto) / 200.0;
+            if (duracao_animacao < 1.0) duracao_animacao = 1.0;
+            if (duracao_animacao > 10.0) duracao_animacao = 10.0;
+            
+            svg_animar_caminho(ctx->svg, curto, cc, 5.0, duracao_animacao);
+        } 
+        else {
             fprintf(ctx->txt_output, "Destino inacessível para caminho mais curto\n");
         }
         
-        if (rapido) {
+       if (rapido) {
             fprintf(ctx->txt_output, "Caminho mais rápido (tempo %.2f s):\n", 
                     caminho_tempo(rapido));
             svg_desenhar_caminho(ctx->svg, rapido, cr, 3.0);
             
-            for (int i = 0; i < caminho_num_arestas(rapido) && i < 30; i++) {
-                Aresta *a = caminho_get_aresta(rapido, i);
-                fprintf(ctx->txt_output, "  - Siga pela %s\n", aresta_get_nome(a));
-            }
-        } else {
+            // Duração baseada no tempo: quanto menor o tempo, mais rápida a animação
+            // Invertemos a relação: tempo pequeno = duração pequena = animação rápida
+            double duracao_animacao = caminho_tempo(rapido) / 5.0;
+            
+            // Limitar para valores razoáveis
+            if (duracao_animacao < 0.5) duracao_animacao = 0.5;
+            if (duracao_animacao > 15.0) duracao_animacao = 15.0;
+            
+            fprintf(ctx->txt_output, "  Duração da animação: %.1f s\n", duracao_animacao);
+            
+            // Animação do caminho mais rápido
+            svg_animar_caminho(ctx->svg, rapido, cr, 5.0, duracao_animacao);
+        } 
+        else {
             fprintf(ctx->txt_output, "Destino inacessível para caminho mais rápido\n");
         }
         
