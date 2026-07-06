@@ -133,7 +133,8 @@ int grafo_adicionar_aresta(Grafo *g, const char *origem, const char *destino,
     a->prox = g->adjacencias[idx_origem];
     g->adjacencias[idx_origem] = a;
     g->num_arestas++;
-    
+    printf("DEBUG grafo: Adicionando aresta %s -> %s, comprimento=%.2f, velocidade=%.2f\n", 
+           origem, destino, comprimento, velocidade);
     return 1;
 }
 
