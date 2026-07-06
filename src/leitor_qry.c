@@ -167,27 +167,39 @@ static void calcular_agm_velocidade_lenta(Grafo *g, double vl, SVG *svg) {
 
 // Processar comando @o?
 static void processar_comando_oreg(ContextoQRY *ctx, char *linha) {
-    int reg;
     char cep[20];
     char face;
     int num;
+    int reg;
     
-    if (sscanf(linha, "@o? %d %s %c %d", &reg, cep, &face, &num) == 4) {
-        Quadra *q = lista_quadras_buscar(ctx->quadras, cep);
-        if (q) {
-            double x, y;
-            quadra_calcular_endereco(q, face, num, &x, &y);
-            registro_armazenar(ctx->registros, reg, x, y);
-            
-            svg_linha(ctx->svg, x, y, x, 0, "red", 1.0, "5,5");
-            
-            char r_str[10];
-            snprintf(r_str, sizeof(r_str), "R%d", reg);
-            svg_texto(ctx->svg, x + 2, y - 3, r_str, "red", 10);
-            
-            fprintf(ctx->txt_output, "[*] @o? R%d %s %c %d\n", reg, cep, face, num);
-            fprintf(ctx->txt_output, "Coordenada: (%.2f, %.2f)\n", x, y);
-        }
+    // Tentar ler com R (ex: R1, R2)
+    if (sscanf(linha, "@o? R%d %s %c %d", &reg, cep, &face, &num) == 4) {
+        // OK, leu com R
+    }
+    // Tentar ler sem R (ex: 1, 2)
+    else if (sscanf(linha, "@o? %d %s %c %d", &reg, cep, &face, &num) == 4) {
+        // OK, leu sem R
+    } else {
+        fprintf(ctx->txt_output, "Erro: formato inválido em: %s\n", linha);
+        return;
+    }
+    
+    Quadra *q = lista_quadras_buscar(ctx->quadras, cep);
+    if (q) {
+        double x, y;
+        quadra_calcular_endereco(q, face, num, &x, &y);
+        registro_armazenar(ctx->registros, reg, x, y);
+        
+        svg_linha(ctx->svg, x, y, x, 0, "red", 1.0, "5,5");
+        
+        char r_str[10];
+        snprintf(r_str, sizeof(r_str), "R%d", reg);
+        svg_texto(ctx->svg, x + 2, y - 3, r_str, "red", 10);
+        
+        fprintf(ctx->txt_output, "[*] @o? R%d %s %c %d\n", reg, cep, face, num);
+        fprintf(ctx->txt_output, "Coordenada: (%.2f, %.2f)\n", x, y);
+    } else {
+        fprintf(ctx->txt_output, "[*] @o? R%d %s %c %d - Quadra nao encontrada\n", reg, cep, face, num);
     }
 }
 
@@ -254,78 +266,103 @@ static void processar_comando_exp(ContextoQRY *ctx, char *linha) {
 
 // Processar comando p?
 static void processar_comando_p(ContextoQRY *ctx, char *linha) {
-    int reg1, reg2;
     char cc[20], cr[20];
+    int reg1, reg2;
+    int encontrou = 0;
     
-    if (sscanf(linha, "p? %d %d %s %s", &reg1, &reg2, cc, cr) == 4) {
-        double x1, y1, x2, y2;
-        
-        fprintf(ctx->txt_output, "[*] p? %d %d %s %s\n", reg1, reg2, cc, cr);
-        
-        if (!registro_obter(ctx->registros, reg1, &x1, &y1) ||
-            !registro_obter(ctx->registros, reg2, &x2, &y2)) {
-            fprintf(ctx->txt_output, "Erro: registrador não definido\n");
-            return;
-        }
-        
-        Vertice *v_orig = grafo_encontrar_vertice_proximo(ctx->grafo, x1, y1);
-        Vertice *v_dest = grafo_encontrar_vertice_proximo(ctx->grafo, x2, y2);
-        
-        if (!v_orig || !v_dest) {
-            fprintf(ctx->txt_output, "Erro: não foi possível encontrar vértices próximos\n");
-            return;
-        }
-        
-        Caminho *curto = dijkstra_distancia(ctx->grafo, v_orig, v_dest);
-        Caminho *rapido = dijkstra_tempo(ctx->grafo, v_orig, v_dest);
-        
-       if (curto) {
-            fprintf(ctx->txt_output, "Caminho mais curto (distância %.2f m):\n", 
-                    caminho_distancia(curto));
-            svg_desenhar_caminho(ctx->svg, curto, cc, 3.0);
-            
-            // O caminho mais curto pode ser animado mais lentamente
-            // Baseado na distância (mais distante = mais lento)
-            double duracao_animacao = caminho_distancia(curto) / 200.0;
-            if (duracao_animacao < 1.0) duracao_animacao = 1.0;
-            if (duracao_animacao > 10.0) duracao_animacao = 10.0;
-            
-            svg_animar_caminho(ctx->svg, curto, cc, 5.0, duracao_animacao);
-        } 
-        else {
-            fprintf(ctx->txt_output, "Destino inacessível para caminho mais curto\n");
-        }
-        
-       if (rapido) {
-            fprintf(ctx->txt_output, "Caminho mais rápido (tempo %.2f s):\n", 
-                    caminho_tempo(rapido));
-            svg_desenhar_caminho(ctx->svg, rapido, cr, 3.0);
-            
-            // Duração baseada no tempo: quanto menor o tempo, mais rápida a animação
-            // Invertemos a relação: tempo pequeno = duração pequena = animação rápida
-            double duracao_animacao = caminho_tempo(rapido) / 5.0;
-            
-            // Limitar para valores razoáveis
-            if (duracao_animacao < 0.5) duracao_animacao = 0.5;
-            if (duracao_animacao > 15.0) duracao_animacao = 15.0;
-            
-            fprintf(ctx->txt_output, "  Duração da animação: %.1f s\n", duracao_animacao);
-            
-            // Animação do caminho mais rápido
-            svg_animar_caminho(ctx->svg, rapido, cr, 5.0, duracao_animacao);
-        } 
-        else {
-            fprintf(ctx->txt_output, "Destino inacessível para caminho mais rápido\n");
-        }
-        
-        svg_circulo(ctx->svg, vertice_get_x(v_orig), vertice_get_y(v_orig), 8, "green", "black", 2);
-        svg_texto(ctx->svg, vertice_get_x(v_orig) - 5, vertice_get_y(v_orig) + 5, "I", "white", 10);
-        svg_circulo(ctx->svg, vertice_get_x(v_dest), vertice_get_y(v_dest), 8, "red", "black", 2);
-        svg_texto(ctx->svg, vertice_get_x(v_dest) - 5, vertice_get_y(v_dest) + 5, "F", "white", 10);
-        
-        caminho_destruir(curto);
-        caminho_destruir(rapido);
+    // Tentar ler com R (ex: p? R1 R2 #ff6600 #66ff00)
+    if (sscanf(linha, "p? R%d R%d %s %s", &reg1, &reg2, cc, cr) == 4) {
+        encontrou = 1;
     }
+    // Tentar ler sem R (ex: p? 1 2 #ff6600 #66ff00)
+    else if (sscanf(linha, "p? %d %d %s %s", &reg1, &reg2, cc, cr) == 4) {
+        encontrou = 1;
+    }
+    
+    if (!encontrou) {
+        fprintf(ctx->txt_output, "Erro: formato inválido em: %s\n", linha);
+        return;
+    }
+    
+    double x1, y1, x2, y2;
+    
+    fprintf(ctx->txt_output, "[*] p? R%d R%d %s %s\n", reg1, reg2, cc, cr);
+    
+    if (!registro_obter(ctx->registros, reg1, &x1, &y1) ||
+        !registro_obter(ctx->registros, reg2, &x2, &y2)) {
+        fprintf(ctx->txt_output, "Erro: registrador não definido (R%d ou R%d)\n", reg1, reg2);
+        return;
+    }
+    
+    // Encontrar vértices mais próximos
+    Vertice *v_orig = grafo_encontrar_vertice_proximo(ctx->grafo, x1, y1);
+    Vertice *v_dest = grafo_encontrar_vertice_proximo(ctx->grafo, x2, y2);
+    
+    if (!v_orig || !v_dest) {
+        fprintf(ctx->txt_output, "Erro: não foi possível encontrar vértices próximos\n");
+        return;
+    }
+    
+    // Calcular caminhos
+    Caminho *curto = dijkstra_distancia(ctx->grafo, v_orig, v_dest);
+    Caminho *rapido = dijkstra_tempo(ctx->grafo, v_orig, v_dest);
+    
+    // Caminho mais curto
+    if (curto) {
+        fprintf(ctx->txt_output, "\nCaminho mais curto (distância %.2f m):\n", 
+                caminho_distancia(curto));
+        svg_desenhar_caminho(ctx->svg, curto, cc, 3.0);
+        
+        // Animação do caminho mais curto
+        double duracao = caminho_distancia(curto) / 200.0;
+        if (duracao < 1.0) duracao = 1.0;
+        if (duracao > 10.0) duracao = 10.0;
+        svg_animar_caminho(ctx->svg, curto, cc, 5.0, duracao);
+        
+        // Descrição textual das ruas
+        for (int i = 0; i < caminho_num_arestas(curto); i++) {
+            Aresta *a = caminho_get_aresta(curto, i);
+            if (a) {
+                fprintf(ctx->txt_output, "  - Siga pela %s\n", aresta_get_nome(a));
+            }
+        }
+    } else {
+        fprintf(ctx->txt_output, "Destino inacessível para caminho mais curto\n");
+    }
+    
+    // Caminho mais rápido
+    if (rapido) {
+        fprintf(ctx->txt_output, "\nCaminho mais rápido (tempo %.2f s):\n", 
+                caminho_tempo(rapido));
+        svg_desenhar_caminho(ctx->svg, rapido, cr, 3.0);
+        
+        // Animação do caminho mais rápido (baseado no tempo real)
+        double duracao = caminho_tempo(rapido) / 5.0;
+        if (duracao < 0.5) duracao = 0.5;
+        if (duracao > 10.0) duracao = 10.0;
+        svg_animar_caminho(ctx->svg, rapido, cr, 5.0, duracao);
+        
+        // Descrição textual das ruas
+        for (int i = 0; i < caminho_num_arestas(rapido); i++) {
+            Aresta *a = caminho_get_aresta(rapido, i);
+            if (a) {
+                fprintf(ctx->txt_output, "  - Siga pela %s\n", aresta_get_nome(a));
+            }
+        }
+    } else {
+        fprintf(ctx->txt_output, "Destino inacessível para caminho mais rápido\n");
+    }
+    
+    // Marcadores I (Início) e F (Fim)
+    svg_circulo(ctx->svg, vertice_get_x(v_orig), vertice_get_y(v_orig), 8, "green", "black", 2);
+    svg_texto(ctx->svg, vertice_get_x(v_orig) - 5, vertice_get_y(v_orig) + 5, "I", "white", 10);
+    
+    svg_circulo(ctx->svg, vertice_get_x(v_dest), vertice_get_y(v_dest), 8, "red", "black", 2);
+    svg_texto(ctx->svg, vertice_get_x(v_dest) - 5, vertice_get_y(v_dest) + 5, "F", "white", 10);
+    
+    // Liberar memória
+    caminho_destruir(curto);
+    caminho_destruir(rapido);
 }
 
 int executar_arquivo_qry(const char *nome_arquivo, ContextoQRY *ctx, const char *nome_base_svg) {
