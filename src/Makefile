@@ -6,8 +6,6 @@ LDFLAGS = -O0 -lm
 # Diretórios
 SRC_DIR = .
 TEST_DIR = ./test
-
-# Diretórios de saída e dados (fora do src)
 UNITY_DIR = ../unity
 OUT_DIR = ../saida
 DATA_DIR = ../dados
@@ -15,7 +13,7 @@ DATA_DIR = ../dados
 # Caminho completo do executável
 EXEC = $(SRC_DIR)/$(PROJ_NAME)
 
-# ==================== ARQUIVOS FONTE DO TRABALHO 2 ====================
+# ==================== ARQUIVOS FONTE ====================
 MAIN_SRCS = $(SRC_DIR)/main.c \
             $(SRC_DIR)/grafo.c \
             $(SRC_DIR)/dijkstra.c \
@@ -38,6 +36,18 @@ TEST_DIJKSTRA_SRCS = $(TEST_DIR)/test_dijkstra.c $(SRC_DIR)/dijkstra.c $(SRC_DIR
 TEST_DIJKSTRA_OBJS = $(TEST_DIJKSTRA_SRCS:.c=.o)
 TEST_DIJKSTRA_BIN = test_dijkstra
 
+TEST_QUADRA_SRCS = $(TEST_DIR)/test_quadra.c $(SRC_DIR)/quadra.c $(UNITY_DIR)/unity.c
+TEST_QUADRA_OBJS = $(TEST_QUADRA_SRCS:.c=.o)
+TEST_QUADRA_BIN = test_quadra
+
+TEST_REGISTRO_SRCS = $(TEST_DIR)/test_registro.c $(SRC_DIR)/registro.c $(UNITY_DIR)/unity.c
+TEST_REGISTRO_OBJS = $(TEST_REGISTRO_SRCS:.c=.o)
+TEST_REGISTRO_BIN = test_registro
+
+TEST_UTILS_SRCS = $(TEST_DIR)/test_utils.c $(SRC_DIR)/utils.c $(UNITY_DIR)/unity.c
+TEST_UTILS_OBJS = $(TEST_UTILS_SRCS:.c=.o)
+TEST_UTILS_BIN = test_utils
+
 # ==================== REGRAS PRINCIPAIS ====================
 
 all: $(EXEC)
@@ -59,25 +69,23 @@ test_dijkstra: $(TEST_DIJKSTRA_OBJS)
 	$(CC) -o $(TEST_DIJKSTRA_BIN) $^ $(LDFLAGS)
 	./$(TEST_DIJKSTRA_BIN)
 
-tstall: test_grafo test_dijkstra
+test_quadra: $(TEST_QUADRA_OBJS)
+	$(CC) -o $(TEST_QUADRA_BIN) $^ $(LDFLAGS)
+	./$(TEST_QUADRA_BIN)
+
+test_registro: $(TEST_REGISTRO_OBJS)
+	$(CC) -o $(TEST_REGISTRO_BIN) $^ $(LDFLAGS)
+	./$(TEST_REGISTRO_BIN)
+
+test_utils: $(TEST_UTILS_OBJS)
+	$(CC) -o $(TEST_UTILS_BIN) $^ $(LDFLAGS)
+	./$(TEST_UTILS_BIN)
+
+tstall: test_grafo test_dijkstra test_quadra test_registro test_utils
 	@echo "✅ Todos os testes concluídos!"
 
 # ==================== EXECUÇÃO ====================
 
-run: $(EXEC)
-	mkdir -p $(OUT_DIR)
-	cd .. && ./src/$(PROJ_NAME) -f $(DATA_DIR)/cidade.geo -v $(DATA_DIR)/mapa.via -q $(DATA_DIR)/consultas.qry -o $(OUT_DIR)
-	@echo "========================================="
-	@echo "Resultados salvos em: $(OUT_DIR)/"
-	@ls -la $(OUT_DIR)/
-	@echo "========================================="
-
-run-geo-only: $(EXEC)
-	mkdir -p $(OUT_DIR)
-	cd .. && ./src/$(PROJ_NAME) -f $(DATA_DIR)/cidade.geo -o $(OUT_DIR)
-	@echo "Resultados salvos em: $(OUT_DIR)/"
-
-# Comando para executar com seus arquivos específicos
 run-c1: $(EXEC)
 	mkdir -p $(OUT_DIR)
 	cd .. && ./src/$(PROJ_NAME) -f $(DATA_DIR)/c1.geo -v $(DATA_DIR)/c1-v.via -q $(DATA_DIR)/consultas.qry -o $(OUT_DIR)
@@ -86,11 +94,6 @@ run-c1: $(EXEC)
 	@ls -la $(OUT_DIR)/
 	@echo "========================================="
 
-# Executar diretamente sem cd (requer que o executável seja chamado de fora)
-run-c1-direct:
-	mkdir -p $(OUT_DIR)
-	./$(PROJ_NAME) -f $(DATA_DIR)/c1.geo -v $(DATA_DIR)/c1-v.via -q $(DATA_DIR)/consultas.qry -o $(OUT_DIR)
-
 # ==================== LIMPEZA ====================
 
 clean:
@@ -98,7 +101,8 @@ clean:
 	rm -f $(SRC_DIR)/*.o $(TEST_DIR)/*.o $(UNITY_DIR)/*.o
 	@echo "🧹 Removendo executáveis..."
 	rm -f $(EXEC)
-	rm -f $(TEST_GRAFO_BIN) $(TEST_DIJKSTRA_BIN)
+	rm -f $(TEST_GRAFO_BIN) $(TEST_DIJKSTRA_BIN) $(TEST_QUADRA_BIN)
+	rm -f $(TEST_REGISTRO_BIN) $(TEST_UTILS_BIN)
 	@echo "🧹 Removendo diretório de saída..."
 	rm -rf $(OUT_DIR)
 	@echo "✅ Limpeza concluída!"
@@ -131,27 +135,22 @@ help:
 	@echo "========================================="
 	@echo ""
 	@echo "📦 COMPILAÇÃO:"
-	@echo "  make              - Compila o programa principal (ted dentro de src/)"
+	@echo "  make              - Compila o programa principal"
 	@echo "  make clean        - Remove arquivos objeto e executáveis"
 	@echo "  make clean-all    - Limpeza completa"
 	@echo ""
 	@echo "🧪 TESTES:"
-	@echo "  make test_grafo    - Testes do grafo"
+	@echo "  make test_grafo   - Testes do grafo"
 	@echo "  make test_dijkstra - Testes do Dijkstra"
-	@echo "  make tstall        - Executa todos os testes"
+	@echo "  make test_quadra  - Testes da quadra"
+	@echo "  make test_registro - Testes do registro"
+	@echo "  make test_utils   - Testes das utils"
+	@echo "  make tstall       - Executa todos os testes"
 	@echo ""
 	@echo "🚀 EXECUÇÃO:"
-	@echo "  make run          - Executa com dados de exemplo"
-	@echo "  make run-geo-only - Executa apenas geo"
 	@echo "  make run-c1       - Executa com c1.geo e c1-v.via"
-	@echo ""
-	@echo "📁 Estrutura:"
-	@echo "   src/            - Códigos fonte e executável"
-	@echo "   src/test/       - Testes unitários"
-	@echo "   ../dados/       - Arquivos de entrada (.geo, .via, .qry)"
-	@echo "   ../saida/       - Arquivos de saída (.svg, .txt, .hf, .hfd)"
 	@echo ""
 
 .PHONY: all clean clean-all tstall
-.PHONY: test_grafo test_dijkstra
-.PHONY: run run-geo-only run-c1 run-c1-direct help
+.PHONY: test_grafo test_dijkstra test_quadra test_registro test_utils
+.PHONY: run-c1 help
