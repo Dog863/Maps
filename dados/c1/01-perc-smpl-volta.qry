@@ -1,0 +1,4 @@
+@o? R1 b05.9 O 44
+@o? R2 b04.1 L 51
+p? R1 R2 #ff6600 #66ff00
+p? R2 R1 #7f2aff #ff2a7f
